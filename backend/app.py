@@ -8,6 +8,18 @@ from flask import Flask, request, jsonify  # For creating the Flask API
 # Initialize Flask app with a name
 superkart_api = Flask("SuperKart")
 
+# suggested by Gemini
+import sklearn.compose._column_transformer as ct_module
+
+# Robust compatibility shim for _RemainderColsList
+if not hasattr(ct_module, '_RemainderColsList'):
+    class _RemainderColsList(list):
+        """Compatibility shim for scikit-learn model unpickling."""
+        pass
+    setattr(ct_module, '_RemainderColsList', _RemainderColsList)
+
+# Now safely load your model
+
 # Load the trained model
 #model = joblib.load("superkart_model.joblib")
 model = joblib.load("rf_tuned.joblib")
