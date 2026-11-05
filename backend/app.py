@@ -1,26 +1,4 @@
 
-# suggested by Gemini
-import pickle
-import joblib
-
-# Global unpickler patch to catch missing scikit-learn internal classes
-_original_find_class = pickle.Unpickler.find_class
-
-def _patched_find_class(self, module, name):
-    if module == 'sklearn.compose._column_transformer' and name == '_RemainderColsList':
-        class _RemainderColsList(list):
-            """Compatibility shim for scikit-learn model unpickling."""
-            pass
-        return _RemainderColsList
-    return _original_find_class(self, module, name)
-
-# Apply the patch globally to Python's unpickler
-pickle.Unpickler.find_class = _patched_find_class
-
-# Now safely load your model
-model = joblib.load("rf_tuned.joblib")
-print("Model loaded successfully!")
-
 # Import necessary libraries
 import numpy as np
 import joblib  # For loading the serialized model
@@ -30,24 +8,8 @@ from flask import Flask, request, jsonify  # For creating the Flask API
 # Initialize Flask app with a name
 superkart_api = Flask("SuperKart")
 
-# suggested by Gemini
-#import sklearn.compose._column_transformer as ct_module
-
-# Robust compatibility shim for _RemainderColsList
-#if not hasattr(ct_module, '_RemainderColsList'):
-#    class _RemainderColsList(list):
-#        """Compatibility shim for scikit-learn model unpickling."""
-#        pass
-#    setattr(ct_module, '_RemainderColsList', _RemainderColsList)
-
-# Now safely load your model
-
 # Load the trained model
-#model = joblib.load("superkart_model.joblib")
-#model = joblib.load("rf_tuned.joblib")
-
-
-
+model = joblib.load("superkart_model.joblib")
 
 # Define a route for the home page
 @superkart_api.get('/')
@@ -104,6 +66,3 @@ def predict_sales_batch():
 # Run the Flask app in debug mode
 if __name__ == '__main__':
     superkart_api.run(debug=True)
-
-  #if __name__ == '__main__':
-  #  superkart_api.run(host='0.0.0.0', port=7860, debug=True)  
