@@ -1,4 +1,3 @@
-
 # Import necessary libraries
 import numpy as np
 import joblib  # For loading the serialized model
@@ -8,13 +7,31 @@ from flask import Flask, request, jsonify  # For creating the Flask API
 # Initialize Flask app with a name
 superkart_api = Flask("SuperKart")
 
-# Load the trained model
-model = joblib.load("superkart_model.joblib")
+# Load the trained model pipeline (pointing directly to your saved file)
+model = joblib.load("rf_tuned.joblib")
+
 
 # Define a route for the home page
 @superkart_api.get('/')
 def home():
     return "Welcome to the SuperKart System"
+
+# Helper: turn raw rows into the exact features the model expects
+def build_features(input_data):
+    # Rename the payload column to the model's column name
+    input_data = input_data.rename(columns={'Store_Age_Years': 'Store_Age'})
+
+    # Create the derived features (matching your exact training formulas)
+    input_data['Log_Allocated_Area'] = np.log1p(input_data['Product_Allocated_Area'])
+    input_data['MRP_per_Weight'] = input_data['Product_MRP'] / input_data['Product_Weight']
+    
+    # Match the exact training mapping
+    input_data['is_top_category'] = input_data['Product_Type_Category'].map(
+        {'Perishables': 1, 'Non Perishables': 0}
+    ).fillna(0).astype(int)
+
+    # Keep the exact column order the model was trained with
+    return input_data[model.feature_names_in_]
 
 # Define an endpoint to predict sales for a single product
 @superkart_api.post('/v1/predict')
@@ -24,20 +41,23 @@ def predict_sales():
 
     # Extract relevant features from the input data
     sample = {
-    'Product_Weight': data['Product_Weight'],
-    'Product_Sugar_Content': data['Product_Sugar_Content'],
-    'Product_Allocated_Area': data['Product_Allocated_Area'],
-    'Product_MRP': data['Product_MRP'],
-    'Store_Size': data['Store_Size'],
-    'Store_Location_City_Type': data['Store_Location_City_Type'],
-    'Store_Type': data['Store_Type'],
-    'Product_Id_char': data['Product_Id_char'],
-    'Store_Age_Years': data['Store_Age_Years'],
-    'Product_Type_Category': data['Product_Type_Category']
-}
+        'Product_Weight': data['Product_Weight'],
+        'Product_Sugar_Content': data['Product_Sugar_Content'],
+        'Product_Allocated_Area': data['Product_Allocated_Area'],
+        'Product_MRP': data['Product_MRP'],
+        'Store_Size': data['Store_Size'],
+        'Store_Location_City_Type': data['Store_Location_City_Type'],
+        'Store_Type': data['Store_Type'],
+        'Product_Id_char': data['Product_Id_char'],
+        'Store_Age_Years': data['Store_Age_Years'],
+        'Product_Type_Category': data['Product_Type_Category']
+    }
 
     # Convert the extracted data into a DataFrame
     input_data = pd.DataFrame([sample])
+
+    # Build the model features before predicting
+    input_data = build_features(input_data)
 
     # Make a prediction using the trained model
     prediction = model.predict(input_data).tolist()[0]
@@ -54,6 +74,9 @@ def predict_sales_batch():
     # Read the file into a DataFrame
     input_data = pd.read_csv(file)
 
+    # Build the model features before predicting
+    input_data = build_features(input_data)
+
     # Make predictions for the batch data
     predictions = model.predict(input_data).tolist()
 
@@ -62,7 +85,6 @@ def predict_sales_batch():
 
     return output_dict
 
-
-# Run the Flask app in debug mode
+# Run the Flask app
 if __name__ == '__main__':
-    superkart_api.run(debug=True)
+    superkart_api.run(debug=False)
