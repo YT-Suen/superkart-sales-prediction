@@ -1,4 +1,4 @@
 pandas>=2.2.3
-requests==2.28.1
-streamlit: 1.66.1
-#PyGithub version: 2.10.0
+requests>=2.32.3
+streamlit==1.66.1
+PyGithub==2.10.0
